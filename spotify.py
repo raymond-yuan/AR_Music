@@ -1,5 +1,7 @@
 import spotipy
 import sys
+import collections
+from collections import defaultdict
 
 class Node:
     def __init__(self):
@@ -11,6 +13,7 @@ class Node:
         return str(Node)
 
 class Edge:
+    # node to is the string *make sure to make it a processed name
     def __init__(self, node2):
         self.child = node2
         self.rel_cost = 0
@@ -22,13 +25,13 @@ if len(sys.argv) > 1:
     input = sys.argv[1]
 else:
     input = 'Kanye West'
-
+#
 spotify = spotipy.Spotify()
-artist_info = spotify.search(q='artist:' + input, type='artist')
-
-name = artist_info['artists']['items'][0]['name']
-uri = artist_info['artists']['items'][0]['uri']
-r_artists = spotify.artist_related_artists(uri)
+# artist_info = spotify.search(q='artist:' + input, type='artist')
+#
+# name = artist_info['artists']['items'][0]['name']
+# uri = artist_info['artists']['items'][0]['uri']
+# r_artists = spotify.artist_related_artists(uri)
 
 def process_name(in_string):
     name_p = ""
@@ -39,29 +42,29 @@ def process_name(in_string):
             name_p += c
     return name_p
 
-name_p = process_name(name)
+# name_p = process_name(name)
+#
+# globals()[name_p] = Node()
+# globals()[name_p].name = name
+# graph[globals()[name_p]] = {}
 
-globals()[name_p] = Node()
-globals()[name_p].name = name
-graph[globals()[name_p]] = {}
-
-i=0
-for artist in r_artists['artists']:
-    temp = Node()
-    temp.pop_cost = 100 - artist['popularity']
-    temp.name = artist['name']
-    artist_name = process_name(artist["name"])
-
-    temp_edge = Edge(artist_name)
-    temp_edge.rel_cost = i
-    globals()[artist_name] = temp
-    graph[globals()[name_p]][artist_name] = temp_edge
-    i += 1
-
-for art in graph[globals()[name_p]]:
-    print art
-
-print graph
+# i=0
+# for artist in r_artists['artists']:
+#     temp = Node()
+#     temp.pop_cost = 100 - artist['popularity']
+#     temp.name = artist['name']
+#     artist_name = process_name(artist["name"])
+#
+#     temp_edge = Edge(artist_name)
+#     temp_edge.rel_cost = i
+#     globals()[artist_name] = temp
+#     graph[globals()[name_p]][artist_name] = temp_edge
+#     i += 1
+#
+# for art in graph[globals()[name_p]]:
+#     print art
+#
+# print graph
 
 def astar(graph, start_str, end_str):
     """
@@ -114,3 +117,64 @@ def astar(graph, start_str, end_str):
 
     return parents
 
+
+
+def bfs(start_artist):
+    """
+        Perform a breadth-first search on digraph graph starting at node startnode.
+
+        Arguments:
+        start_artist - String of your starting artist
+
+        Returns:
+        Graph of the whole shit nips
+    """
+    graph_exp = defaultdict(lambda: {})
+
+    # artist_info = spotify.search(q='artist:' + start_artist, type='artist')
+    # name = artist_info['artists']['items'][0]['name']
+    # uri = artist_info['artists']['items'][0]['uri']
+    # r_artists = spotify.artist_related_artists(uri)
+
+    name_p = process_name(start_artist)
+
+    globals()[name_p] = Node()
+    globals()[name_p].name = start_artist
+    globals()[name_p].pop_cost = 0
+
+    # Initialize search queue
+    queue = collections.deque([globals()[name_p]])
+    visited = set()
+
+    # Loop until all connected nodes have been explored
+    while queue:
+        node = queue.popleft()
+
+        artist_info = spotify.search(q='artist:' + node.name, type='artist')
+        # name = artist_info['artists']['items'][0]['name']
+        uri = artist_info['artists']['items'][0]['uri']
+        r_artists = spotify.artist_related_artists(uri)
+
+        i = 1
+        for artist in r_artists['artists']:
+            # Make related artist into a node
+            temp = Node()
+            temp.pop_cost = 100 - artist['popularity']
+            temp.name = artist['name']
+            artist_name = process_name(artist["name"])
+            globals()[artist_name] = temp
+
+            # Adds related artist to original node in graph
+            temp_edge = Edge(artist_name)
+            temp_edge.rel_cost = i
+            graph_exp[node][artist_name] = temp_edge
+            i += 1
+
+        for nbr in graph_exp[node].keys():
+            if nbr not in visited:
+                visited.add(nbr)
+                queue.append(globals()[nbr])
+        print graph_exp
+    return graph_exp
+
+print bfs("Kanye West")
