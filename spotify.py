@@ -34,13 +34,7 @@ spotify = spotipy.Spotify()
 # r_artists = spotify.artist_related_artists(uri)
 
 def process_name(in_string):
-    name_p = ""
-    for c in in_string:
-        if c == " ":
-            name_p += "_"
-        else:
-            name_p += c
-    return name_p
+    return in_string.replace(' ','_')
 
 # name_p = process_name(name)
 #
@@ -151,6 +145,9 @@ def bfs(start_artist):
         node = queue.popleft()
 
         artist_info = spotify.search(q='artist:' + node.name, type='artist')
+        if (artist_info['artists']['items'] == []):
+            visited.add(node.name)
+            continue
         # name = artist_info['artists']['items'][0]['name']
         uri = artist_info['artists']['items'][0]['uri']
         r_artists = spotify.artist_related_artists(uri)
@@ -158,11 +155,12 @@ def bfs(start_artist):
         i = 1
         for artist in r_artists['artists']:
             # Make related artist into a node
-            temp = Node()
-            temp.pop_cost = 100 - artist['popularity']
-            temp.name = artist['name']
             artist_name = process_name(artist["name"])
-            globals()[artist_name] = temp
+            if artist_name not in globals():
+                temp = Node()
+                temp.pop_cost = 100 - artist['popularity']
+                temp.name = artist['name']
+                globals()[artist_name] = temp
 
             # Adds related artist to original node in graph
             temp_edge = Edge(artist_name)
@@ -177,4 +175,71 @@ def bfs(start_artist):
         print graph_exp
     return graph_exp
 
-print bfs("Kanye West")
+# print bfs("Kanye West")
+
+def iddfs(start_artist):
+    """
+        Perform a iterative deepening depth first search on graph starting at node of name of st.
+
+        Arguments:
+        start_artist - String of your starting artist
+
+        Returns:
+        Graph of the whole shit nips
+    """
+    iddfs_graph_exp = defaultdict(lambda: {})
+
+    # artist_info = spotify.search(q='artist:' + start_artist, type='artist')
+    # name = artist_info['artists']['items'][0]['name']
+    # uri = artist_info['artists']['items'][0]['uri']
+    # r_artists = spotify.artist_related_artists(uri)
+
+    name_p = process_name(start_artist)
+
+    globals()[name_p] = Node()
+    globals()[name_p].name = start_artist
+    globals()[name_p].pop_cost = 0
+
+    while true:
+        depth = 0
+        end = DLS(globals()[name_p],depth)
+        if end:
+            break
+        depth+=1
+
+def DLS(node, depth):
+    if depth > 0:
+        artist_info = spotify.search(q='artist:' + node.name, type='artist')
+        # name = artist_info['artists']['items'][0]['name']
+        uri = artist_info['artists']['items'][0]['uri']
+        r_artists = spotify.artist_related_artists(uri)
+        i = 1
+        for artist in r_artists['artists']:
+            artist_name = process_name(artist["name"])
+            if artist_name not in globals():
+                temp = Node()
+                temp.pop_cost = 100 - artist['popularity']
+                temp.name = artist['name']
+                globals()[artist_name] = temp
+
+            # Adds related artist to original node in graph
+            temp_edge = Edge(artist_name)
+            temp_edge.rel_cost = i
+            iddfs_graph_exp[node][artist_name] = temp_edge
+            i += 1
+
+        for nbr in iddfs_graph_exp[node].keys():
+            found = DLS(globals()[nbr], depth - 1)
+            if found is None:
+                return false
+    return true
+
+ye = Node()
+ye.name = 'ye'
+ye.pop_cost = 2
+bey = Edge('bey')
+bey.rel_cost = 3
+graphtest = {ye:{'Bey':bey}}
+text_file = open("Output.txt","w")
+text_file.write(graphtest)
+text_file.close()
