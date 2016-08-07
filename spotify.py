@@ -1,6 +1,7 @@
 import spotipy
 import sys
 import collections
+import cPickle as pickle
 from collections import defaultdict
 
 class Node:
@@ -10,7 +11,7 @@ class Node:
         self.name = ''
 
     def __str__(self):
-        return str(Node)
+        return str(self.name)
 
 class Edge:
     # node to is the string *make sure to make it a processed name
@@ -113,7 +114,7 @@ def astar(graph, start_str, end_str):
 
 
 
-def bfs(start_artist):
+def bfs(start_artist, out_filename):
     """
         Perform a breadth-first search on digraph graph starting at node startnode.
 
@@ -123,12 +124,10 @@ def bfs(start_artist):
         Returns:
         Graph of the whole shit nips
     """
-    graph_exp = defaultdict(lambda: {})
+    # graph_exp = defaultdict(lambda: {})
+    graph_exp = defaultdict(lambda: defaultdict(lambda: {}))
 
-    # artist_info = spotify.search(q='artist:' + start_artist, type='artist')
-    # name = artist_info['artists']['items'][0]['name']
-    # uri = artist_info['artists']['items'][0]['uri']
-    # r_artists = spotify.artist_related_artists(uri)
+    # name_p = process_name(start_artist)
 
     name_p = process_name(start_artist)
 
@@ -140,14 +139,16 @@ def bfs(start_artist):
     queue = collections.deque([globals()[name_p]])
     visited = set()
 
+    count = 0
     # Loop until all connected nodes have been explored
     while queue:
         node = queue.popleft()
-
+        print count, node.name
         artist_info = spotify.search(q='artist:' + node.name, type='artist')
         if (artist_info['artists']['items'] == []):
             visited.add(node.name)
             continue
+
         # name = artist_info['artists']['items'][0]['name']
         uri = artist_info['artists']['items'][0]['uri']
         r_artists = spotify.artist_related_artists(uri)
@@ -155,8 +156,9 @@ def bfs(start_artist):
         i = 1
         for artist in r_artists['artists']:
             # Make related artist into a node
+
             artist_name = process_name(artist["name"])
-            if artist_name not in globals():
+            if artist not in globals():
                 temp = Node()
                 temp.pop_cost = 100 - artist['popularity']
                 temp.name = artist['name']
@@ -165,15 +167,19 @@ def bfs(start_artist):
             # Adds related artist to original node in graph
             temp_edge = Edge(artist_name)
             temp_edge.rel_cost = i
-            graph_exp[node][artist_name] = temp_edge
+            graph_exp[node.name][node][artist_name] = temp_edge
             i += 1
 
         for nbr in graph_exp[node].keys():
             if nbr not in visited:
                 visited.add(nbr)
                 queue.append(globals()[nbr])
-        print graph_exp
-    return graph_exp
+        count += 1
+        if count == 500:
+            break
+        # print graph_exp
+    # pickle.dump(graph_exp, open(out_filename, "wb"))
+    return dict(graph_exp)
 
 # print bfs("Kanye West")
 
@@ -200,15 +206,21 @@ def iddfs(start_artist):
     globals()[name_p].name = start_artist
     globals()[name_p].pop_cost = 0
 
+
     while True:
+        count = 0
         depth = 0
-        end = DLS(globals()[name_p],depth, iddfs_graph_exp)
+        end = DLS(globals()[name_p], depth, iddfs_graph_exp)
+        if len(iddfs_graph_exp) == 1000:
+            end = True
         if end:
-            break
+            return iddfs_graph_exp
         depth += 1
+
 
 def DLS(node, depth, iddfs_graph_exp):
     if depth > 0:
+
         artist_info = spotify.search(q='artist:' + node.name, type='artist')
         # name = artist_info['artists']['items'][0]['name']
         uri = artist_info['artists']['items'][0]['uri']
@@ -237,14 +249,29 @@ def DLS(node, depth, iddfs_graph_exp):
 ye = Node()
 ye.name = 'ye'
 ye.pop_cost = 2
+
 bey = Edge('bey')
 bey.rel_cost = 3
-graphtest = {ye:{'Bey':bey}}
-text_file = open("Output.txt","w")
-text_file.write(str(graphtest))
-text_file.close()
 
-with open("Output.txt") as f:
-    content = f.readlines()
+graphtest = defaultdict(lambda: {})
+graphtest[ye]['Bey'] = bey
+# graphtest = {ye:{'Bey':bey}}
+graphtest = dict(graphtest)
+print graphtest[ye]
 
-print type(content[0])
+pickle.dump(graphtest, open("save.p", "wb"))
+
+graph_out = pickle.load(open("save.p", "rb"))
+
+print graph_out.keys()[0]
+# print graph_out[graph_out.keys()[0]]
+print
+
+# graph_out_bfs = bfs("Kanye West", "BFS_Graph_Out.p")
+# pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
+
+BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
+print type(BFS_Gen.keys()[12])
+
+# {Name : {Node: {NAME EDGE: Edge}}}
+

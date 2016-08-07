@@ -1,1 +1,1 @@
-{<__main__.Node instance at 0x1020e7c20>: {'Bey': <__main__.Edge instance at 0x10308ab90>}}
+{<__main__.Node instance at 0x10308ac20>: {'Bey': <__main__.Edge instance at 0x10308ab90>}}
