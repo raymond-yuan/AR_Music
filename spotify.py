@@ -193,7 +193,7 @@ def iddfs(start_artist):
         Returns:
         Graph of the whole shit nips
     """
-    iddfs_graph_exp = defaultdict(lambda: {})
+    iddfs_graph_exp = defaultdict(lambda: defaultdict(lambda: {}))
 
     # artist_info = spotify.search(q='artist:' + start_artist, type='artist')
     # name = artist_info['artists']['items'][0]['name']
@@ -206,25 +206,23 @@ def iddfs(start_artist):
     globals()[name_p].name = start_artist
     globals()[name_p].pop_cost = 0
 
-
+    depth = 0
     while True:
-        count = 0
-        depth = 0
-        end = DLS(globals()[name_p], depth, iddfs_graph_exp)
-        if len(iddfs_graph_exp) == 1000:
-            end = True
-        if end:
+        DLS(globals()[name_p], depth, iddfs_graph_exp)
+        if len(iddfs_graph_exp.keys()) > 1000:
+            for key in iddfs_graph_exp.keys():
+                iddfs_graph_exp[key] = dict(iddfs_graph_exp[key])
+            iddfs_graph_exp = dict(iddfs_graph_exp)
             return iddfs_graph_exp
         depth += 1
 
 
 def DLS(node, depth, iddfs_graph_exp):
     if depth > 0:
-
         artist_info = spotify.search(q='artist:' + node.name, type='artist')
-        # name = artist_info['artists']['items'][0]['name']
         uri = artist_info['artists']['items'][0]['uri']
         r_artists = spotify.artist_related_artists(uri)
+
         i = 1
         for artist in r_artists['artists']:
             artist_name = process_name(artist["name"])
@@ -237,41 +235,40 @@ def DLS(node, depth, iddfs_graph_exp):
             # Adds related artist to original node in graph
             temp_edge = Edge(artist_name)
             temp_edge.rel_cost = i
-            iddfs_graph_exp[node][artist_name] = temp_edge
+            iddfs_graph_exp[node.name][node][artist_name] = temp_edge
             i += 1
 
-        for nbr in iddfs_graph_exp[node].keys():
-            found = DLS(globals()[nbr], depth - 1)
-            if found is None:
+        for nbr in iddfs_graph_exp[node.name][node].keys():
+            if len(iddfs_graph_exp) % 10 == 0:
+                print nbr
+            if DLS(globals()[process_name(nbr)], depth - 1,iddfs_graph_exp):
                 return False
     return True
 
-ye = Node()
-ye.name = 'ye'
-ye.pop_cost = 2
+# ye = Node()
+# ye.name = 'ye'
+# ye.pop_cost = 2
 
-bey = Edge('bey')
-bey.rel_cost = 3
+# bey = Edge('bey')
+# bey.rel_cost = 3
 
-graphtest = defaultdict(lambda: {})
-graphtest[ye]['Bey'] = bey
-# graphtest = {ye:{'Bey':bey}}
-graphtest = dict(graphtest)
-print graphtest[ye]
+# graphtest = defaultdict(lambda: {})
+# graphtest[ye]['Bey'] = bey
+# # graphtest = {ye:{'Bey':bey}}
+# graphtest = dict(graphtest)
+# print graphtest[ye]
 
-pickle.dump(graphtest, open("save.p", "wb"))
+# pickle.dump(graphtest, open("save.p", "wb"))
 
-graph_out = pickle.load(open("save.p", "rb"))
+# graph_out = pickle.load(open("save.p", "rb"))
 
-print graph_out.keys()[0]
-# print graph_out[graph_out.keys()[0]]
-print
+# print graph_out.keys()[0]
+# # print graph_out[graph_out.keys()[0]]
+# print
 
-# graph_out_bfs = bfs("Kanye West", "BFS_Graph_Out.p")
-# pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
+graph_out_iddfs = iddfs("Kanye West")
+pickle.dump(graph_out_iddfs, open("IDDFS_Graph_Out.p", "wb"))
 
-BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
-print type(BFS_Gen.keys()[12])
-
-# {Name : {Node: {NAME EDGE: Edge}}}
+IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
+print IDDFS_Gen.keys()
 
