@@ -200,14 +200,14 @@ def iddfs(start_artist):
     globals()[name_p].name = start_artist
     globals()[name_p].pop_cost = 0
 
-    while true:
+    while True:
         depth = 0
-        end = DLS(globals()[name_p],depth)
+        end = DLS(globals()[name_p],depth, iddfs_graph_exp)
         if end:
             break
-        depth+=1
+        depth += 1
 
-def DLS(node, depth):
+def DLS(node, depth, iddfs_graph_exp):
     if depth > 0:
         artist_info = spotify.search(q='artist:' + node.name, type='artist')
         # name = artist_info['artists']['items'][0]['name']
@@ -231,8 +231,8 @@ def DLS(node, depth):
         for nbr in iddfs_graph_exp[node].keys():
             found = DLS(globals()[nbr], depth - 1)
             if found is None:
-                return false
-    return true
+                return False
+    return True
 
 ye = Node()
 ye.name = 'ye'
@@ -241,5 +241,10 @@ bey = Edge('bey')
 bey.rel_cost = 3
 graphtest = {ye:{'Bey':bey}}
 text_file = open("Output.txt","w")
-text_file.write(graphtest)
+text_file.write(str(graphtest))
 text_file.close()
+
+with open("Output.txt") as f:
+    content = f.readlines()
+
+print type(content[0])
