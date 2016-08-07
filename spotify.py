@@ -64,7 +64,7 @@ def process_name(in_string):
 def astar(graph, start_str, end_str):
     """
 
-    :param graph: Graph of {Artist(Node) : [{"Child": Child_Node}]}
+    :param graph: Graph of {Artist_Name : {Artist(Node) : [{"Child": Child_Node}]}}
     :param start_node: String of the Start Node
     :param end_node: String of the End Node
     :return: Parents Mapping (Path from Start Node to End Node )
@@ -77,7 +77,7 @@ def astar(graph, start_str, end_str):
     parents[start_str] = None
     openset.add(start_str)
 
-    start_node = globals()[start_str]
+    start_node = graph[start_str].keys()[0]
     f_cost[start_str] = start_node.pop_cost
 
     while openset:
@@ -86,35 +86,44 @@ def astar(graph, start_str, end_str):
         for key in f_cost:
             if f_cost[key] == min_f:
                 node_name = key
+            # print "KEY: ", key, key == end_str
+        # print "FCOST", f_cost
+        # print node_name
         if node_name == end_str:
-            return parents
-        f_cost.pop(node_name)
 
+            return reconstruct_path(parents, node_name)
+        f_cost.pop(node_name)
         openset.remove(node_name)
         closedset.add(node_name)
 
-        node = globals()[node_name]
-        for nbr in graph[node].keys():
-            nbr_node = globals()[nbr]
-            if nbr not in closedset and nbr not in openset:
-                openset.add(nbr)
-                nbr_node.g_cost = graph[node][nbr].rel_cost + node.g_cost
-                f_cost[nbr] = nbr_node.g_cost + nbr_node.pop_cost
-                parents[nbr] = node_name
-            elif nbr in openset:
-                new_g = graph[node][nbr].rel_cost + node.g_cost
-                if new_g < nbr_node.g_cost:
-                    nbr_node.g_cost = new_g
+        node = graph[node_name].keys()[0]
+        for nbr in graph[node_name][node].keys():
+            # print nbr
+            if nbr in graph.keys():
+                nbr_node = graph[nbr].keys()[0] # globals()[nbr]
+                if nbr not in closedset and nbr not in openset:
+                    openset.add(nbr)
+                    nbr_node.g_cost = graph[node_name][node][nbr].rel_cost + node.g_cost
                     f_cost[nbr] = nbr_node.g_cost + nbr_node.pop_cost
                     parents[nbr] = node_name
-            elif nbr in closedset:
-                continue
-
+                elif nbr in openset:
+                    new_g = graph[node_name][node][nbr].rel_cost + node.g_cost
+                    if new_g < nbr_node.g_cost:
+                        nbr_node.g_cost = new_g
+                        f_cost[nbr] = nbr_node.g_cost + nbr_node.pop_cost
+                        parents[nbr] = node_name
+                elif nbr in closedset:
+                    continue
     return parents
 
+def reconstruct_path(parents, current):
+    total_path = [current]
+    while current in parents.keys():
+        current = parents[current]
+        total_path.insert(0, current)
+    return total_path
 
-
-def bfs(start_artist, out_filename):
+def bfs(start_artist):
     """
         Perform a breadth-first search on digraph graph starting at node startnode.
 
@@ -131,6 +140,10 @@ def bfs(start_artist, out_filename):
 
     name_p = process_name(start_artist)
 
+    # temp_node = Node()
+    # temp_node.name = start_artist
+    # temp_node.pop_cost = 0
+
     globals()[name_p] = Node()
     globals()[name_p].name = start_artist
     globals()[name_p].pop_cost = 0
@@ -143,9 +156,10 @@ def bfs(start_artist, out_filename):
     # Loop until all connected nodes have been explored
     while queue:
         node = queue.popleft()
-        print count, node.name
+        if count % 100 == 0:
+            print count, node.name
         artist_info = spotify.search(q='artist:' + node.name, type='artist')
-        if (artist_info['artists']['items'] == []):
+        if artist_info['artists']['items'] == []:
             visited.add(node.name)
             continue
 
@@ -158,26 +172,29 @@ def bfs(start_artist, out_filename):
             # Make related artist into a node
 
             artist_name = process_name(artist["name"])
-            if artist not in globals():
+            if artist_name not in globals():
                 temp = Node()
                 temp.pop_cost = 100 - artist['popularity']
-                temp.name = artist['name']
+                temp.name = artist["name"]
                 globals()[artist_name] = temp
 
             # Adds related artist to original node in graph
-            temp_edge = Edge(artist_name)
+            temp_edge = Edge(artist['name'])
             temp_edge.rel_cost = i
-            graph_exp[node.name][node][artist_name] = temp_edge
+            graph_exp[node.name][node][temp.name] = temp_edge
             i += 1
 
-        for nbr in graph_exp[node].keys():
+        for nbr in graph_exp[node.name][node].keys():
             if nbr not in visited:
                 visited.add(nbr)
-                queue.append(globals()[nbr])
+                queue.append(globals()[process_name(nbr)])
         count += 1
-        if count == 500:
+        if count == 1000:
             break
-        # print graph_exp
+
+    for key in graph_exp.keys():
+        graph_exp[key] = dict(graph_exp[key])
+
     # pickle.dump(graph_exp, open(out_filename, "wb"))
     return dict(graph_exp)
 
@@ -266,9 +283,17 @@ def DLS(node, depth, iddfs_graph_exp):
 # # print graph_out[graph_out.keys()[0]]
 # print
 
+### GEN GRAPH AND WRTIE TO .P FILE ###
+# graph_out_bfs = bfs("Kanye West")
+# pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
 graph_out_iddfs = iddfs("Kanye West")
 pickle.dump(graph_out_iddfs, open("IDDFS_Graph_Out.p", "wb"))
 
+BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
+print BFS_Gen["Kanye West"].keys()[0].name
+print astar(BFS_Gen, "Kanye West", "Destiny's Child")
 IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
 print IDDFS_Gen.keys()
 
+
+# {Name : {Node: {NAME EDGE: Edge}}}
