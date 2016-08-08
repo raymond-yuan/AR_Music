@@ -3,6 +3,7 @@ import sys
 import collections
 import cPickle as pickle
 from collections import defaultdict
+import time
 
 class Node:
     def __init__(self):
@@ -211,56 +212,62 @@ def iddfs(start_artist):
         Graph of the whole shit nips
     """
     iddfs_graph_exp = defaultdict(lambda: defaultdict(lambda: {}))
+    iddfs_visited = set()
 
-    # artist_info = spotify.search(q='artist:' + start_artist, type='artist')
-    # name = artist_info['artists']['items'][0]['name']
-    # uri = artist_info['artists']['items'][0]['uri']
-    # r_artists = spotify.artist_related_artists(uri)
-
+    artist_info = spotify.search(q='artist:' + start_artist, type='artist')
     name_p = process_name(start_artist)
-
     globals()[name_p] = Node()
-    globals()[name_p].name = start_artist
+    globals()[name_p].name = artist_info['artists']['items'][0]['name']
     globals()[name_p].pop_cost = 0
 
     depth = 0
-    while True:
-        DLS(globals()[name_p], depth, iddfs_graph_exp)
-        if len(iddfs_graph_exp.keys()) > 1000:
-            for key in iddfs_graph_exp.keys():
-                iddfs_graph_exp[key] = dict(iddfs_graph_exp[key])
-            iddfs_graph_exp = dict(iddfs_graph_exp)
-            return iddfs_graph_exp
+    while depth < 5:
+        end = DLS(globals()[name_p], depth, iddfs_graph_exp,iddfs_visited)
+        print 'Depth:', depth
+        print '# of Artists:', len(iddfs_graph_exp)
         depth += 1
+    for key in iddfs_graph_exp.keys():
+        iddfs_graph_exp[key] = dict(iddfs_graph_exp[key])
+    iddfs_graph_exp = dict(iddfs_graph_exp)
+    return iddfs_graph_exp
 
 
-def DLS(node, depth, iddfs_graph_exp):
+def DLS(node, depth, iddfs_graph_exp, iddfs_visited):
+    if depth == 1:
+        if len(iddfs_graph_exp.keys()) % 50 == 0:
+            print len(iddfs_graph_exp.keys())
+
+        if node.name not in iddfs_visited:
+            iddfs_visited.add(node.name)
+            artist_info = spotify.search(q='artist:' + node.name, type='artist')
+            if artist_info['artists']['items'] == []:
+                return
+            uri = artist_info['artists']['items'][0]['uri']
+            r_artists = spotify.artist_related_artists(uri)
+            create_neighbors(node, r_artists, iddfs_graph_exp)
+
     if depth > 0:
-        artist_info = spotify.search(q='artist:' + node.name, type='artist')
-        uri = artist_info['artists']['items'][0]['uri']
-        r_artists = spotify.artist_related_artists(uri)
-
-        i = 1
-        for artist in r_artists['artists']:
-            artist_name = process_name(artist["name"])
-            if artist_name not in globals():
-                temp = Node()
-                temp.pop_cost = 100 - artist['popularity']
-                temp.name = artist['name']
-                globals()[artist_name] = temp
-
-            # Adds related artist to original node in graph
-            temp_edge = Edge(artist_name)
-            temp_edge.rel_cost = i
-            iddfs_graph_exp[node.name][node][artist_name] = temp_edge
-            i += 1
-
         for nbr in iddfs_graph_exp[node.name][node].keys():
-            if len(iddfs_graph_exp) % 10 == 0:
-                print nbr
-            if DLS(globals()[process_name(nbr)], depth - 1,iddfs_graph_exp):
-                return False
-    return True
+            DLS(globals()[process_name(nbr)], depth - 1, iddfs_graph_exp, iddfs_visited)
+
+    return
+
+def create_neighbors(node, related_artists, graph):
+    i = 1
+    for artist in related_artists['artists']:
+        # Make related artist into a node
+        artist_name = process_name(artist["name"])
+        if artist_name not in globals():
+            temp = Node()
+            temp.pop_cost = 100 - artist['popularity']
+            temp.name = artist["name"]
+            globals()[artist_name] = temp
+        # Adds related artist to original node in graph
+        temp_edge = Edge(artist['name'])
+        temp_edge.rel_cost = i
+        graph[node.name][node][artist['name']] = temp_edge
+        i += 1
+
 
 # ye = Node()
 # ye.name = 'ye'
@@ -286,14 +293,13 @@ def DLS(node, depth, iddfs_graph_exp):
 ### GEN GRAPH AND WRTIE TO .P FILE ###
 # graph_out_bfs = bfs("Kanye West")
 # pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
-graph_out_iddfs = iddfs("Kanye West")
-pickle.dump(graph_out_iddfs, open("IDDFS_Graph_Out.p", "wb"))
+# graph_out_iddfs = iddfs("Kanye West")
+# pickle.dump(graph_out_iddfs, open("IDDFS_Graph_Out.p", "wb"))
 
-BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
-print BFS_Gen["Kanye West"].keys()[0].name
-print astar(BFS_Gen, "Kanye West", "Destiny's Child")
+# BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
+# print BFS_Gen["Kanye West"].keys()[0].name
+# print astar(BFS_Gen, "Kanye West", "Destiny's Child")
 IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
-print IDDFS_Gen.keys()
-
+print astar(IDDFS_Gen,'Jeremih','Enrique Iglesias')
 
 # {Name : {Node: {NAME EDGE: Edge}}}
