@@ -134,6 +134,7 @@ def bfs(start_artist):
         Returns:
         Graph of the whole shit nips
     """
+    start_time = time.time()
     # graph_exp = defaultdict(lambda: {})
     graph_exp = defaultdict(lambda: defaultdict(lambda: {}))
 
@@ -155,51 +156,146 @@ def bfs(start_artist):
 
     count = 0
     # Loop until all connected nodes have been explored
+
+    bad_list = []
     while queue:
-        node = queue.popleft()
-        if count % 100 == 0:
+        try:
+            node = queue.popleft()
+            # if count % 100 == 0:
             print count, node.name
-        artist_info = spotify.search(q='artist:' + node.name, type='artist')
-        if artist_info['artists']['items'] == []:
-            visited.add(node.name)
-            continue
+            artist_info = spotify.search(q='artist:' + node.name, type='artist')
+            if artist_info['artists']['items'] == []:
+                visited.add(node.name)
+                continue
 
-        # name = artist_info['artists']['items'][0]['name']
-        uri = artist_info['artists']['items'][0]['uri']
-        r_artists = spotify.artist_related_artists(uri)
+            # name = artist_info['artists']['items'][0]['name']
+            uri = artist_info['artists']['items'][0]['uri']
+            r_artists = spotify.artist_related_artists(uri)
 
-        i = 1
-        for artist in r_artists['artists']:
-            # Make related artist into a node
+            i = 1
+            for artist in r_artists['artists']:
+                # Make related artist into a node
 
-            artist_name = process_name(artist["name"])
-            if artist_name not in globals():
-                temp = Node()
-                temp.pop_cost = 100 - artist['popularity']
-                temp.name = artist["name"]
-                globals()[artist_name] = temp
+                artist_name = process_name(artist["name"])
+                if artist_name not in globals():
+                    temp = Node()
+                    temp.pop_cost = 100 - artist['popularity']
+                    temp.name = artist["name"]
+                    globals()[artist_name] = temp
 
-            # Adds related artist to original node in graph
-            temp_edge = Edge(artist['name'])
-            temp_edge.rel_cost = i
-            graph_exp[node.name][node][temp.name] = temp_edge
-            i += 1
+                # Adds related artist to original node in graph
+                temp_edge = Edge(artist['name'])
+                temp_edge.rel_cost = i
+                graph_exp[node.name][node][temp.name] = temp_edge
+                i += 1
 
-        for nbr in graph_exp[node.name][node].keys():
-            if nbr not in visited:
-                visited.add(nbr)
-                queue.append(globals()[process_name(nbr)])
-        count += 1
-        if count == 1000:
-            break
+                if temp.name not in visited:
+                    visited.add(temp.name)
+                    queue.append(globals()[process_name(temp.name)])
+
+            if count == 50:
+                break
+
+            # for nbr in graph_exp[node.name][node].keys():
+            #     if nbr not in visited:
+            #         visited.add(nbr)
+            #         queue.append(globals()[process_name(nbr)])
+            count += 1
+        except:
+            bad_list.append(node.name)
+            print "Unexpected error:", sys.exc_info()[0], "at ", node.name
+
 
     for key in graph_exp.keys():
         graph_exp[key] = dict(graph_exp[key])
 
+    text_file = open("broken_artist_list.txt", "w")
+    text_file.write(str(bad_list))
+    text_file.close()
     # pickle.dump(graph_exp, open(out_filename, "wb"))
+    print time.time() - start_time
     return dict(graph_exp)
 
-# print bfs("Kanye West")
+
+def astar_graph_gen(start_str):
+    """
+
+    :param graph: Graph of {Artist_Name : {Artist(Node) : [{"Child": Child_Node}]}}
+    :param start_node: String of the Start Node
+    :param end_node: String of the End Node
+    :return: Parents Mapping (Path from Start Node to End Node )
+    """
+    start_time = time.time()
+    openset = set([])
+    closedset = set([])
+
+    openset.add(start_str)
+
+    graph_exp = defaultdict(lambda: defaultdict(lambda: {}))
+
+    name_p = process_name(start_str)
+
+    globals()[name_p] = Node()
+    globals()[name_p].name = start_str
+    globals()[name_p].pop_cost = 0
+
+    count = 0
+    bad_list = []
+    while openset:
+        try:
+            node_name = openset.pop()
+            node = globals()[process_name(node_name)]
+            if count % 50 == 0:
+                print count, node.name
+            closedset.add(node_name)
+
+            artist_info = spotify.search(q='artist:' + node_name, type='artist')
+            if artist_info['artists']['items'] == []:
+                closedset.add(node_name)
+                continue
+
+            # name = artist_info['artists']['items'][0]['name']
+            uri = artist_info['artists']['items'][0]['uri']
+            r_artists = spotify.artist_related_artists(uri)
+
+            i = 1
+            for artist in r_artists['artists']:
+                # Make related artist into a node
+
+                artist_name = process_name(artist["name"])
+                if artist_name not in globals():
+                    temp = Node()
+                    temp.pop_cost = 100 - artist['popularity']
+                    temp.name = artist["name"]
+                    globals()[artist_name] = temp
+
+                # Adds related artist to original node in graph
+                temp_edge = Edge(artist['name'])
+                temp_edge.rel_cost = i
+                graph_exp[node.name][node][temp.name] = temp_edge
+                i += 1
+
+                if temp.name not in closedset:
+                    openset.add(temp.name)
+                    closedset.add(temp.name)
+            count += 1
+            # if count == 20:
+            #     break
+        except:
+
+            bad_list.append(node.name)
+            print "Unexpected error:", sys.exc_info()[0], "at ", node.name
+    print end_time - start_time
+
+    for key in graph_exp.keys():
+        graph_exp[key] = dict(graph_exp[key])
+
+    text_file = open("broken_artist_list.txt", "w")
+    text_file.write(str(bad_list))
+    text_file.close()
+    # pickle.dump(graph_exp, open(out_filename, "wb"))
+    print time.time() - start_time
+    return dict(graph_exp)
 
 def iddfs(start_artist):
     """
@@ -211,6 +307,7 @@ def iddfs(start_artist):
         Returns:
         Graph of the whole shit nips
     """
+    start_time = time.time()
     iddfs_graph_exp = defaultdict(lambda: defaultdict(lambda: {}))
     iddfs_visited = set()
 
@@ -229,6 +326,9 @@ def iddfs(start_artist):
     for key in iddfs_graph_exp.keys():
         iddfs_graph_exp[key] = dict(iddfs_graph_exp[key])
     iddfs_graph_exp = dict(iddfs_graph_exp)
+    end_time = time.time()
+    print
+    print start_time - end_time
     return iddfs_graph_exp
 
 
@@ -291,15 +391,16 @@ def create_neighbors(node, related_artists, graph):
 # print
 
 ### GEN GRAPH AND WRTIE TO .P FILE ###
-# graph_out_bfs = bfs("Kanye West")
-# pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
-# graph_out_iddfs = iddfs("Kanye West")
+graph_out_bfs = astar_graph_gen("Kanye West")
+pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
+
+# graph_out_iddfs = bfs("Kanye West")
 # pickle.dump(graph_out_iddfs, open("IDDFS_Graph_Out.p", "wb"))
 
-# BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
-# print BFS_Gen["Kanye West"].keys()[0].name
-# print astar(BFS_Gen, "Kanye West", "Destiny's Child")
-IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
-print astar(IDDFS_Gen,'Jeremih','Enrique Iglesias')
+BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
+print astar(BFS_Gen, "Kanye West", "Lil Wayne")
+
+# IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
+# print astar(IDDFS_Gen,'Jeremih','Enrique Iglesias')
 
 # {Name : {Node: {NAME EDGE: Edge}}}
