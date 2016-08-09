@@ -285,7 +285,7 @@ def astar_graph_gen(start_str):
 
             bad_list.append(node.name)
             print "Unexpected error:", sys.exc_info()[0], "at ", node.name
-    print end_time - start_time
+
 
     for key in graph_exp.keys():
         graph_exp[key] = dict(graph_exp[key])
