@@ -91,7 +91,6 @@ def astar(graph, start_str, end_str):
         # print "FCOST", f_cost
         # print node_name
         if node_name == end_str:
-
             return reconstruct_path(parents, node_name)
         f_cost.pop(node_name)
         openset.remove(node_name)
@@ -115,6 +114,7 @@ def astar(graph, start_str, end_str):
                         parents[nbr] = node_name
                 elif nbr in closedset:
                     continue
+        print parents
     return parents
 
 def reconstruct_path(parents, current):
@@ -148,7 +148,7 @@ def bfs(start_artist):
 
     globals()[name_p] = Node()
     globals()[name_p].name = start_artist
-    globals()[name_p].pop_cost = 0
+    globals()[name_p].pop_cost = spotify.search(q='artist:' + start_artist, type='artist')['artists']['items'][0]['popularity']
 
     # Initialize search queue
     queue = collections.deque([globals()[name_p]])
@@ -201,9 +201,11 @@ def bfs(start_artist):
             #         visited.add(nbr)
             #         queue.append(globals()[process_name(nbr)])
             count += 1
+            # if count == 20:
+            #     break
         except:
             bad_list.append(node.name)
-            print "Unexpected error:", sys.exc_info()[0], "at ", node.name
+            print "Unexpected error idk sorry:", sys.exc_info()[0], "at ", node.name
 
 
     for key in graph_exp.keys():
@@ -279,8 +281,8 @@ def astar_graph_gen(start_str):
                     openset.add(temp.name)
                     closedset.add(temp.name)
             count += 1
-            # if count == 20:
-            #     break
+            if count == 20:
+                break
         except:
 
             bad_list.append(node.name)
@@ -391,12 +393,18 @@ def create_neighbors(node, related_artists, graph):
 # print
 
 ### GEN GRAPH AND WRTIE TO .P FILE ###
+<<<<<<< HEAD
 graph_out_bfs = bfs("Kanye West")
 pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
+=======
+# graph_out_bfs = bfs("Kanye West")
+# pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
+>>>>>>> master
 
 # graph_out_iddfs = iddfs("Kanye West")
 # pickle.dump(graph_out_iddfs, open("IDDFS_Graph_Out.p", "wb"))
 
+<<<<<<< HEAD
 IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
 BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
 # print IDDFS_Gen['Kanye West'][IDDFS_Gen['Kanye West'].keys()[0]]['Lil Wayne'].rel_cost
@@ -405,8 +413,44 @@ BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
 # print IDDFS_Gen['JAY Z'].keys()[0].pop_cost
 print BFS_Gen['JAY Z'].keys()[0].pop_cost
 print IDDFS_Gen['JAY Z'].keys()[0].pop_cost
+=======
+#
+# IDDFS_Gen = pickle.load(open("IDDFS_Graph_Out.p", "rb"))
+# k_Out =  IDDFS_Gen['Kanye West']
+
+
+# BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
+# b_Out =  BFS_Gen['Kanye West']
+# # print k_Out == b_Out
+# print BFS_Gen.keys()
+# print BFS_Gen["Kanye West"][BFS_Gen["Kanye West"].keys()[0]]["Lil Wayne"].rel_cost
+# print BFS_Gen["Kanye West"][BFS_Gen["Kanye West"].keys()[0]]["JAY Z"].rel_cost
+# print BFS_Gen['Lil Wayne'].keys()[0].pop_cost
+# print BFS_Gen['JAY Z'].keys()[0].pop_cost
+# print astar(BFS_Gen, "Kanye West", "Lil Wayne")
+print
+# print BFS_Gen["JAY Z"][BFS_Gen["JAY Z"].keys()[0]]["Lil Wayne"].rel_cost
+>>>>>>> master
 
 # IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
 # print astar(IDDFS_Gen,'Kanye West','Lil Wayne')
 
 # {Name : {Node: {NAME EDGE: Edge}}}
+
+test_artist = "Kanye West"
+artist_info = spotify.search(q='artist:' + test_artist, type='artist')
+
+uri = artist_info['artists']['items'][0]['uri']
+results = spotify.artist_top_tracks(uri)
+
+print results['tracks'][:10]
+print
+
+for track in results['tracks'][:10]:
+    print 'track    : ' + track['name']
+    print 'audio    : ' + track['preview_url']
+    print 'cover art: ' + track['album']['images'][0]['url']
+    print 'id: ' + track['id']
+    print
+
+
