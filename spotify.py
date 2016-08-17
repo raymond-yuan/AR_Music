@@ -96,7 +96,7 @@ def astar(graph, start_str, end_str):
         f_cost.pop(node_name)
         openset.remove(node_name)
         closedset.add(node_name)
-
+        print openset
         node = graph[node_name].keys()[0]
         for nbr in graph[node_name][node].keys():
             # print nbr
@@ -314,12 +314,12 @@ def iddfs(start_artist):
     artist_info = spotify.search(q='artist:' + start_artist, type='artist')
     name_p = process_name(start_artist)
     globals()[name_p] = Node()
-    globals()[name_p].name = artist_info['artists']['items'][0]['name']
-    globals()[name_p].pop_cost = 0
+    globals()[name_p].name = start_artist
+    globals()[name_p].pop_cost = artist_info['artists']['items'][0]['popularity']
 
     depth = 0
-    while depth < 5:
-        end = DLS(globals()[name_p], depth, iddfs_graph_exp,iddfs_visited)
+    while depth < 3:
+        DLS(globals()[name_p], depth, iddfs_graph_exp, iddfs_visited)
         print 'Depth:', depth
         print '# of Artists:', len(iddfs_graph_exp)
         depth += 1
@@ -328,7 +328,7 @@ def iddfs(start_artist):
     iddfs_graph_exp = dict(iddfs_graph_exp)
     end_time = time.time()
     print
-    print start_time - end_time
+    print end_time - start_time
     return iddfs_graph_exp
 
 
@@ -346,7 +346,7 @@ def DLS(node, depth, iddfs_graph_exp, iddfs_visited):
             r_artists = spotify.artist_related_artists(uri)
             create_neighbors(node, r_artists, iddfs_graph_exp)
 
-    if depth > 0:
+    elif depth > 0:
         for nbr in iddfs_graph_exp[node.name][node].keys():
             DLS(globals()[process_name(nbr)], depth - 1, iddfs_graph_exp, iddfs_visited)
 
@@ -391,16 +391,22 @@ def create_neighbors(node, related_artists, graph):
 # print
 
 ### GEN GRAPH AND WRTIE TO .P FILE ###
-graph_out_bfs = astar_graph_gen("Kanye West")
+graph_out_bfs = bfs("Kanye West")
 pickle.dump(graph_out_bfs, open("BFS_Graph_Out.p", "wb"))
 
-# graph_out_iddfs = bfs("Kanye West")
+# graph_out_iddfs = iddfs("Kanye West")
 # pickle.dump(graph_out_iddfs, open("IDDFS_Graph_Out.p", "wb"))
 
+IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
 BFS_Gen = pickle.load( open( "BFS_Graph_Out.p", "rb" ) )
-print astar(BFS_Gen, "Kanye West", "Lil Wayne")
+# print IDDFS_Gen['Kanye West'][IDDFS_Gen['Kanye West'].keys()[0]]['Lil Wayne'].rel_cost
+# print IDDFS_Gen['Kanye West'][IDDFS_Gen['Kanye West'].keys()[0]]['JAY Z'].rel_cost
+# print IDDFS_Gen['Lil Wayne'].keys()[0].pop_cost
+# print IDDFS_Gen['JAY Z'].keys()[0].pop_cost
+print BFS_Gen['JAY Z'].keys()[0].pop_cost
+print IDDFS_Gen['JAY Z'].keys()[0].pop_cost
 
 # IDDFS_Gen = pickle.load( open( "IDDFS_Graph_Out.p", "rb" ) )
-# print astar(IDDFS_Gen,'Jeremih','Enrique Iglesias')
+# print astar(IDDFS_Gen,'Kanye West','Lil Wayne')
 
 # {Name : {Node: {NAME EDGE: Edge}}}
